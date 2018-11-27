@@ -71,6 +71,9 @@ class FullyConnected:
         if debug:
             print('loss: ', creloss)
             print('accuracy: ', accuracy)
+            print(self.weights['w1'])
+            print(self.weights['w2'])
+            print(self.weights['w3'])
         
         dw1, db1, dw2, db2, dw3, db3 = self.backward(inputs, labels, outputs)
         self.weights, self.biases = optimizer.mbgd(self.weights, self.biases, dw1, db1, dw2, db2, dw3, db3, lr)
@@ -144,23 +147,19 @@ class FullyConnected:
         Returns:
             outputs (torch.tensor): predictions from neural network. Size (batch_size, N_out)
         """
-        self.cache['z1'] = self.weighted_sum(inputs,self.weights['w1'],self.biases['b1'])
-        self.cache['z1'] = activation.sigmoid(self.cache['z1'])
-
-        self.cache['z2'] = self.weighted_sum(self.cache['z1'],self.weights['w2'],self.biases['b2'])
-        self.cache['z2'] = activation.sigmoid(self.cache['z2'])
-        
-        self.cache['z3'] = self.weighted_sum(self.cache['z2'],self.weights['w3'],self.biases['b3'])
-        self.cache['z3'] = activation.softmax(self.cache['z3'])
+        self.cache['z1'] = activation.sigmoid(self.weighted_sum(inputs,self.weights['w1'],self.biases['b1']))
+        self.cache['z2'] = activation.sigmoid(self.weighted_sum(self.cache['z1'],self.weights['w2'],self.biases['b2']))
+        self.cache['z3'] = activation.softmax(self.weighted_sum(self.cache['z2'],self.weights['w3'],self.biases['b3']))
         
         outputs = self.cache['z3']
+        self.print_layers()
         return outputs
 
     def weighted_sum(self, X, w, b):
         """Weighted sum at neuron
         
         Args:
-            X (torch.tensor): matrix of Size (K, L)
+            X (torch.tensor): matrix of Size (K, L)1/(1+torch1/(1+torch.exp(-z)).exp(-z))
             w (torch.tensor): weight matrix of Size (J, L)
             b (torch.tensor): vector of Size (J)
 
@@ -169,6 +168,12 @@ class FullyConnected:
         """
         result = torch.add(torch.matmul(X,torch.t(w)),b)
         return result
+
+    def print_layers(self):
+        print(self.cache['z1'])
+        print(self.cache['z2'])
+        print(self.cache['z3'])
+
 
     def backward(self, inputs, labels, outputs):
         """Backward pass of neural network
@@ -192,6 +197,10 @@ class FullyConnected:
         dout = loss.delta_cross_entropy_softmax(outputs, labels)
         d2 = torch.matmul(dout,self.weights['w3'])*activation.delta_sigmoid(self.cache['z2'])
         d1 = torch.matmul(d2,self.weights['w2'])*activation.delta_sigmoid(self.cache['z1'])
+        print("\nBackward pass")
+        print(dout)
+        print(d2)
+        print(d1)
         dw1, db1, dw2, db2, dw3, db3 = self.calculate_grad(inputs, d1, d2, dout)# calculate all gradients
         return dw1, db1, dw2, db2, dw3, db3
 
